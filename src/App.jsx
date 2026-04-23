@@ -47,7 +47,9 @@ function App() {
       <div className="main-wrapper">
         <Sidebar currentView={view} onViewChange={handleViewChange} />
         <main className="main-content">
-          {renderView()}
+          <div className="content-container">
+            {renderView()}
+          </div>
         </main>
       </div>
     </div>

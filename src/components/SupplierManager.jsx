@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, MapPin, Phone, Mail, Globe, Star, Trash2, Edit, ExternalLink, ShieldCheck, Zap, MoreVertical, X, Check, Loader2, Users, LayoutGrid } from 'lucide-react';
+import { Plus, Search, MapPin, Phone, Mail, Globe, Star, Trash2, Edit, ExternalLink, ShieldCheck, Zap, MoreVertical, X, Check, Loader2, Users, LayoutGrid, Power, PowerOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 const SupplierManager = () => {
@@ -7,6 +7,7 @@ const SupplierManager = () => {
    const [loading, setLoading] = useState(true);
    const [error, setError] = useState(null);
    const [isModalOpen, setIsModalOpen] = useState(false);
+   const [searchTerm, setSearchTerm] = useState('');
    const [newSupplier, setNewSupplier] = useState({
       nome: '',
       email: '',
@@ -62,87 +63,136 @@ const SupplierManager = () => {
       }
    };
 
+   const toggleStatus = async (supplier) => {
+      const newStatus = supplier.status === 'ativo' ? 'inativo' : 'ativo';
+      try {
+         const { error } = await supabase
+            .from('fornecedores')
+            .update({ status: newStatus })
+            .eq('id', supplier.id);
+         
+         if (error) throw error;
+         
+         setSuppliers(suppliers.map(s => 
+            s.id === supplier.id ? { ...s, status: newStatus } : s
+         ));
+      } catch (err) {
+         alert('Erro ao atualizar status: ' + err.message);
+      }
+   };
+
+   const deleteSupplier = async (id) => {
+      if (!window.confirm('Tem certeza que deseja excluir este fornecedor?')) return;
+      try {
+         const { error } = await supabase
+            .from('fornecedores')
+            .delete()
+            .eq('id', id);
+         
+         if (error) throw error;
+         setSuppliers(suppliers.filter(s => s.id !== id));
+      } catch (err) {
+         alert('Erro ao excluir: ' + err.message);
+      }
+   };
+
+   const filteredSuppliers = suppliers.filter(s => 
+      s.nome.toLowerCase().includes(searchTerm.toLowerCase())
+   );
+
    return (
-      <div className="max-w-7xl mx-auto space-y-12 pb-24 animate-fade-in">
+      <div className="space-y-8 animate-fade-in w-full">
          {/* Header Section */}
-         <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 px-2">
-            <div className="space-y-4">
+         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-8 border-b border-[#22262B]">
+            <div className="space-y-3">
                <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#FF5722] animate-pulse"></span>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Rede de Distribuição</span>
+                  <span className="text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Rede de Fornecedores</span>
                </div>
-               <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight leading-none">Gestão de Fornecedores</h1>
-               <p className="text-sm text-slate-500 font-medium max-w-md">
-                  Monitore a performance e gerencie o cadastro das distribuidoras parceiras na <span className="text-[#FF5722] font-extrabold">Alice Farma</span>.
+               <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-none">Gestão de Parceiros</h1>
+               <p className="text-sm text-slate-500 font-medium max-w-xl">
+                  Administre sua rede de distribuição e monitore a performance estratégica da sua farmácia.
                </p>
             </div>
-            <div className="flex items-center gap-4">
-               <div className="relative group">
-                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#FF5722]" size={18} />
+            
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+               <div className="relative group min-w-[280px] lg:min-w-[350px]">
+                  <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-700 group-focus-within:text-[#FF5722]" size={18} />
                   <input 
                     type="text" 
-                    placeholder="Buscar fornecedor..." 
-                    className="pl-14 pr-6 py-3.5 bg-white border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 outline-none focus:border-[#FF5722]/30 transition-all shadow-sm w-64"
+                    placeholder="Buscar distribuidora..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-14 pr-8 py-4 bg-[#1A1C1E] border border-[#22262B] rounded-2xl text-sm font-bold text-white outline-none focus:border-[#FF5722]/30 transition-all"
                   />
                </div>
                <button 
                  onClick={() => setIsModalOpen(true)}
-                 className="bg-[#FF5722] text-white px-8 py-3.5 rounded-full font-black text-sm uppercase tracking-widest shadow-xl shadow-[#FF5722]/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-3"
+                 className="btn-primary flex-1 sm:flex-none h-[56px] px-8"
                >
                   <Plus size={20} strokeWidth={3} />
-                  Novo Parceiro
+                  Cadastrar Novo
                </button>
             </div>
          </div>
 
          {/* Content Grid */}
          {loading ? (
-            <div className="p-24 text-center">
+            <div className="py-24 text-center">
                <Loader2 className="animate-spin mx-auto text-[#FF5722] mb-6" size={48} />
-               <p className="text-xs font-bold text-slate-300 uppercase tracking-[0.3em]">Carregando Fornecedores...</p>
+               <p className="text-xs font-bold text-slate-600 uppercase tracking-widest">Sincronizando Parceiros...</p>
             </div>
          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-               {suppliers.map((s) => (
-                  <div key={s.id} className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm hover:shadow-2xl hover:scale-[1.02] transition-all duration-500 group relative overflow-hidden">
-                     <div className="absolute top-0 right-0 w-24 h-24 bg-slate-50 rounded-full -mr-12 -mt-12 group-hover:bg-[#FF5722]/5 transition-colors"></div>
-                     
-                     <div className="flex items-start justify-between relative z-10 mb-8">
-                        <div className="w-16 h-16 bg-slate-900 text-white rounded-2xl flex items-center justify-center text-xl font-black shadow-xl shadow-slate-900/10">
-                           {s.nome.charAt(0)}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+               {filteredSuppliers.map((s) => (
+                  <div key={s.id} className={`card flex flex-col h-full hover:border-[#FF5722]/40 hover:shadow-2xl transition-all group ${s.status === 'inativo' ? 'opacity-60 grayscale-[0.5]' : ''} !p-6`}>
+                     <div className="flex items-start justify-between mb-6">
+                        <div className={`w-14 h-14 border border-[#22262B] rounded-2xl flex items-center justify-center text-xl font-black shadow-xl group-hover:scale-110 transition-transform ${s.status === 'ativo' ? 'bg-[#0A0C0E] text-[#FF5722]' : 'bg-[#1A1C1E] text-slate-700'}`}>
+                           {s.nome.charAt(0).toUpperCase()}
                         </div>
-                        <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                           s.status === 'ativo' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'
+                        <div className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${
+                           s.status === 'ativo' ? 'bg-green-500/10 text-green-500' : 'bg-slate-500/10 text-slate-500'
                         }`}>
+                           <span className={`w-1.5 h-1.5 rounded-full ${s.status === 'ativo' ? 'bg-green-500' : 'bg-slate-500'}`} />
                            {s.status}
                         </div>
                      </div>
 
-                     <div className="space-y-2 mb-8 relative z-10">
-                        <h3 className="text-xl font-extrabold text-slate-900 tracking-tight group-hover:text-[#FF5722] transition-colors">{s.nome}</h3>
-                        <div className="flex items-center gap-2 text-slate-400">
-                           <MapPin size={14} />
-                           <span className="text-xs font-bold uppercase tracking-wider">{s.cidade} - {s.estado}</span>
+                     <div className="space-y-1 mb-6 flex-1">
+                        <h3 className="text-lg font-extrabold text-white tracking-tight group-hover:text-[#FF5722] transition-colors line-clamp-1">{s.nome}</h3>
+                        <div className="flex items-center gap-2 text-slate-600">
+                           <MapPin size={12} />
+                           <span className="text-[9px] font-bold uppercase tracking-widest truncate">
+                              {s.cidade ? `${s.cidade} - ${s.estado}` : 'Localização não definida'}
+                           </span>
                         </div>
                      </div>
 
-                     <div className="space-y-3 pt-8 border-t border-slate-50 relative z-10">
-                        <div className="flex items-center justify-between text-sm">
-                           <span className="font-bold text-slate-400">Contato</span>
-                           <span className="font-black text-slate-900">{s.whatsapp}</span>
+                     <div className="space-y-3 py-6 border-t border-[#22262B]">
+                        <div className="flex items-center justify-between">
+                           <span className="text-[9px] font-bold text-slate-700 uppercase tracking-widest">WhatsApp</span>
+                           <span className="text-[11px] font-black text-slate-300">{s.whatsapp || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                           <span className="font-bold text-slate-400">E-mail</span>
-                           <span className="font-black text-[#FF5722]">{s.email}</span>
+                        <div className="flex items-center justify-between">
+                           <span className="text-[9px] font-bold text-slate-700 uppercase tracking-widest">Corporativo</span>
+                           <span className="text-[11px] font-black text-[#FF5722] truncate max-w-[120px]">{s.email || 'N/A'}</span>
                         </div>
                      </div>
 
-                     <div className="mt-8 pt-6 flex items-center gap-2 relative z-10">
-                        <button className="flex-1 bg-slate-50 hover:bg-[#FF5722] hover:text-white text-slate-900 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">
-                           Ver Performance
+                     <div className="mt-6 flex gap-2">
+                        <button 
+                           onClick={() => toggleStatus(s)}
+                           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-[9px] uppercase tracking-widest border border-[#22262B] transition-all ${
+                              s.status === 'ativo' ? 'bg-slate-800 text-white hover:bg-slate-700' : 'bg-[#FF5722] text-white hover:bg-[#E64A19]'
+                           }`}
+                        >
+                           {s.status === 'ativo' ? <><PowerOff size={12} /> Desativar</> : <><Power size={12} /> Ativar</>}
                         </button>
-                        <button className="w-12 h-12 flex items-center justify-center bg-slate-50 hover:bg-red-50 text-slate-300 hover:text-red-500 rounded-xl transition-all">
-                           <Trash2 size={18} />
+                        <button 
+                           onClick={() => deleteSupplier(s.id)}
+                           className="w-10 h-10 flex items-center justify-center bg-[#1A1C1E] hover:bg-red-500/10 text-slate-800 hover:text-red-500 rounded-xl border border-[#22262B] transition-all"
+                        >
+                           <Trash2 size={16} />
                         </button>
                      </div>
                   </div>
@@ -152,71 +202,71 @@ const SupplierManager = () => {
 
          {/* Add Modal */}
          {isModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/80 backdrop-blur-sm animate-fade-in">
-               <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden animate-scale-up">
-                  <div className="p-10 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+            <div className="fixed inset-0 z-[1000] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-black/90 backdrop-blur-sm animate-fade-in">
+               <div className="bg-[#14171A] w-full sm:max-w-2xl rounded-t-[2.5rem] sm:rounded-[3rem] shadow-2xl overflow-hidden animate-scale-up max-h-[90vh] overflow-y-auto border-t sm:border border-[#22262B]">
+                  <div className="p-8 md:p-10 border-b border-[#22262B] flex justify-between items-center bg-[#1A1C1E]/50 sticky top-0 z-10">
                      <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 bg-[#FF5722] text-white rounded-2xl flex items-center justify-center shadow-xl shadow-[#FF5722]/20">
+                        <div className="w-14 h-14 bg-[#FF5722] text-white rounded-2xl flex items-center justify-center shadow-2xl shadow-[#FF5722]/20">
                            <Users size={28} />
                         </div>
                         <div>
-                           <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight">Novo Parceiro</h3>
-                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Cadastrar Fornecedor na Alice Farma</p>
+                           <h3 className="text-2xl font-extrabold text-white tracking-tight">Novo Parceiro</h3>
+                           <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Cadastro Estratégico</p>
                         </div>
                      </div>
-                     <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 flex items-center justify-center bg-white border border-slate-100 rounded-2xl text-slate-300 hover:text-[#FF5722] transition-all">
-                        <X size={24} />
+                     <button onClick={() => setIsModalOpen(false)} className="w-12 h-12 flex items-center justify-center bg-[#1A1C1E] border border-[#22262B] rounded-2xl text-slate-700 hover:text-[#FF5722] transition-all">
+                        <X size={20} />
                      </button>
                   </div>
 
-                  <form onSubmit={handleAddSupplier} className="p-10 space-y-8">
-                     <div className="grid grid-cols-2 gap-8">
-                        <div className="col-span-2 space-y-3">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Razão Social</label>
+                  <form onSubmit={handleAddSupplier} className="p-8 md:p-10 space-y-8">
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                        <div className="sm:col-span-2 space-y-3">
+                           <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-2">Razão Social</label>
                            <input 
                              required 
-                             className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:border-[#FF5722]/30 focus:bg-white transition-all shadow-sm" 
+                             className="w-full px-6 py-4 bg-[#0A0C0E] border border-[#22262B] rounded-2xl font-bold text-white outline-none focus:border-[#FF5722]/30 transition-all" 
                              placeholder="Ex: Distribuidora MedFarma LTDA"
                              value={newSupplier.nome}
                              onChange={(e) => setNewSupplier({...newSupplier, nome: e.target.value})}
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Cidade</label>
+                           <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-2">Cidade</label>
                            <input 
                              required 
-                             className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:border-[#FF5722]/30 focus:bg-white transition-all shadow-sm" 
+                             className="w-full px-6 py-4 bg-[#0A0C0E] border border-[#22262B] rounded-2xl font-bold text-white outline-none focus:border-[#FF5722]/30 transition-all" 
                              placeholder="Ex: São Paulo"
                              value={newSupplier.cidade}
                              onChange={(e) => setNewSupplier({...newSupplier, cidade: e.target.value})}
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">Estado</label>
+                           <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-2">Estado</label>
                            <input 
                              required 
-                             className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:border-[#FF5722]/30 focus:bg-white transition-all shadow-sm" 
+                             className="w-full px-6 py-4 bg-[#0A0C0E] border border-[#22262B] rounded-2xl font-bold text-white outline-none focus:border-[#FF5722]/30 transition-all" 
                              placeholder="Ex: SP"
                              value={newSupplier.estado}
                              onChange={(e) => setNewSupplier({...newSupplier, estado: e.target.value})}
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">WhatsApp / Contato</label>
+                           <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-2">WhatsApp</label>
                            <input 
                              required 
-                             className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:border-[#FF5722]/30 focus:bg-white transition-all shadow-sm" 
+                             className="w-full px-6 py-4 bg-[#0A0C0E] border border-[#22262B] rounded-2xl font-bold text-white outline-none focus:border-[#FF5722]/30 transition-all" 
                              placeholder="(11) 99999-9999"
                              value={newSupplier.contato}
                              onChange={(e) => setNewSupplier({...newSupplier, contato: e.target.value})}
                            />
                         </div>
                         <div className="space-y-3">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-2">E-mail Corporativo</label>
+                           <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest ml-2">E-mail</label>
                            <input 
                              required 
                              type="email"
-                             className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-900 outline-none focus:border-[#FF5722]/30 focus:bg-white transition-all shadow-sm" 
+                             className="w-full px-6 py-4 bg-[#0A0C0E] border border-[#22262B] rounded-2xl font-bold text-white outline-none focus:border-[#FF5722]/30 transition-all" 
                              placeholder="contato@fornecedor.com.br"
                              value={newSupplier.email}
                              onChange={(e) => setNewSupplier({...newSupplier, email: e.target.value})}
@@ -225,8 +275,8 @@ const SupplierManager = () => {
                      </div>
 
                      <div className="flex justify-end pt-6">
-                        <button type="submit" className="px-12 py-5 bg-[#FF5722] text-white rounded-full font-black uppercase tracking-widest shadow-2xl shadow-[#FF5722]/30 hover:scale-105 active:scale-95 transition-all">
-                           Finalizar Cadastro
+                        <button type="submit" className="btn-primary w-full sm:w-auto px-12 py-5 text-sm">
+                           Confirmar Cadastro
                         </button>
                      </div>
                   </form>
