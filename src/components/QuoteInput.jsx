@@ -3,7 +3,7 @@ import {
   Upload, Send, Trash2, Edit3, CheckCircle, Package, AlertCircle, 
   ArrowLeft, Rocket, ListChecks, Loader2, Sparkles, Check, 
   ChevronRight, ClipboardList, SendHorizonal, ArrowRight, 
-  HelpCircle, FileText, Zap, MousePointer2, FileCode, CheckCircle2,
+  HelpCircle, FileText, Activity, MousePointer2, FileCode, CheckCircle2,
   MousePointer, LayoutGrid, Pill, Thermometer, Bath, RefreshCcw
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
@@ -20,7 +20,7 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
 
   // Real-time parser feedback
   useEffect(() => {
-    const lines = text.split('\n').filter(l => l.trim())
+    const lines = text.split('\n').filter(l => l.trim());
     const parsed = lines.map(line => {
       const parts = line.split(/[|;,]/)
       return {
@@ -32,13 +32,13 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
   }, [text])
 
   const templates = [
-    { label: 'Antibióticos', text: 'Amoxicilina 500mg | 10\nAzitromicina 500mg | 5', icon: Pill, color: '#FF5722' },
+    { label: 'Antibióticos', text: 'Amoxicilina 500mg | 10\nAzitromicina 500mg | 5', icon: Pill, color: '#0EA5E9' },
     { label: 'Gripais', text: 'Paracetamol 750mg | 20\nDipirona 500mg | 15', icon: Thermometer, color: '#3B82F6' },
     { label: 'Higiene', text: 'Fralda G | 50\nShampoo Infantil | 12', icon: Bath, color: '#10B981' }
   ]
 
   const handleParse = () => {
-    const lines = text.split('\n').filter(l => l.trim())
+    const lines = text.split('\n').filter(l => l.trim());
     const parsed = lines.map((line, idx) => {
       const parts = line.split(/[|;,]/)
       return {
@@ -151,16 +151,16 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-[#22262B]">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-[var(--border)]">
         <div className="space-y-2">
-           <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-[#FF5722] font-bold text-[10px] uppercase tracking-[0.2em] transition-all">
+           <button onClick={onBack} className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[#0EA5E9] font-bold text-[10px] uppercase tracking-[0.2em] transition-all">
               <ArrowLeft size={14} /> Voltar ao Painel
            </button>
-           <h1 className="text-3xl font-extrabold text-white tracking-tight">Nova Cotação</h1>
+           <h1 className="text-3xl font-extrabold text-[var(--text-main)] tracking-tight">Nova Cotação</h1>
         </div>
         
         {/* Minimalist Stepper */}
-        <div className="flex items-center gap-3 bg-[#1A1C1E] p-1.5 rounded-2xl border border-[#22262B] self-start md:self-auto overflow-x-auto max-w-full">
+        <div className="flex items-center gap-3 bg-[var(--accent)] p-1.5 rounded-2xl border border-[var(--border)] self-start md:self-auto overflow-x-auto max-w-full">
            {[
              { id: 1, label: 'Entrada', icon: ClipboardList },
              { id: 2, label: 'Revisão', icon: ListChecks },
@@ -168,15 +168,15 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
            ].map((s, idx) => (
              <div key={s.id} className="flex items-center gap-2 flex-shrink-0">
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black transition-all ${
-                  step === s.id ? 'bg-[#FF5722] text-white shadow-lg shadow-[#FF5722]/20' : 
-                  step > s.id ? 'bg-green-500 text-white' : 'bg-[#0A0C0E] text-slate-700'
+                  step === s.id ? 'bg-[#0EA5E9] text-[var(--text-main)] shadow-lg shadow-[#0EA5E9]/20' : 
+                  step > s.id ? 'bg-green-500 text-[var(--text-main)]' : 'bg-[var(--bg-main)] text-[var(--text-muted)]'
                 }`}>
                    {step > s.id ? <Check size={14} strokeWidth={3} /> : s.id}
                 </div>
-                <span className={`text-[10px] font-bold uppercase tracking-widest px-1 ${step === s.id ? 'text-white' : 'text-slate-700'}`}>
+                <span className={`text-[10px] font-bold uppercase tracking-widest px-1 ${step === s.id ? 'text-[var(--text-main)]' : 'text-[var(--text-muted)]'}`}>
                    {s.label}
                 </span>
-                {idx < 2 && <ChevronRight size={14} className="text-slate-800 mx-1 hidden sm:block" />}
+                {idx < 2 && <ChevronRight size={14} className="text-[var(--text-muted)] mx-1 hidden sm:block" />}
              </div>
            ))}
         </div>
@@ -186,20 +186,20 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
         <div className="fixed inset-0 z-[2000] bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-6 animate-fade-in">
            <div className="w-full max-w-md space-y-8 text-center">
               <div className="relative inline-block">
-                <div className="absolute inset-0 bg-[#FF5722] blur-3xl opacity-20 animate-pulse"></div>
-                <Zap className="text-[#FF5722] relative z-10 animate-bounce" size={64} fill="currentColor" />
+                <div className="absolute inset-0 bg-[#0EA5E9] blur-3xl opacity-20 animate-pulse"></div>
+                <Activity className="text-[#0EA5E9] relative z-10 animate-bounce" size={64} fill="currentColor" />
               </div>
               <div className="space-y-2">
-                <h2 className="text-2xl font-black text-white tracking-tight">Alice Engine em Ação</h2>
-                <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">{statusText}</p>
+                <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Alice Engine em Ação</h2>
+                <p className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">{statusText}</p>
               </div>
-              <div className="w-full h-3 bg-[#1A1C1E] rounded-full overflow-hidden border border-[#22262B]">
+              <div className="w-full h-3 bg-[var(--accent)] rounded-full overflow-hidden border border-[var(--border)]">
                  <div 
-                   className="h-full bg-[#FF5722] transition-all duration-500 shadow-lg shadow-[#FF5722]/40"
+                   className="h-full bg-[#0EA5E9] transition-all duration-500 shadow-lg shadow-[#0EA5E9]/40"
                    style={{ width: `${progress}%` }}
                  />
               </div>
-              <div className="flex justify-between items-center text-[10px] font-black text-slate-700 uppercase tracking-widest">
+              <div className="flex justify-between items-center text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
                  <span>Processando Dados</span>
                  <span>{Math.round(progress)}%</span>
               </div>
@@ -214,12 +214,12 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
             <div className="card shadow-2xl shadow-black/50">
                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
                   <div className="flex items-center gap-4">
-                     <div className="w-12 h-12 bg-[#FF5722]/10 rounded-2xl flex items-center justify-center text-[#FF5722]">
-                        <Zap size={24} fill="currentColor" />
+                     <div className="w-12 h-12 bg-[#0EA5E9]/10 rounded-2xl flex items-center justify-center text-[#0EA5E9]">
+                        <Activity size={24} fill="currentColor" />
                      </div>
                      <div>
-                        <h3 className="text-xl font-extrabold text-white tracking-tight">Parser Inteligente</h3>
-                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Processamento Alice v2</p>
+                        <h3 className="text-xl font-extrabold text-[var(--text-main)] tracking-tight">Parser Inteligente</h3>
+                        <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Processamento Alice v2</p>
                      </div>
                   </div>
                   {liveParsed.length > 0 && (
@@ -232,7 +232,7 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
 
                <div className="relative group">
                   <textarea
-                    className="w-full h-[300px] md:h-[450px] p-6 md:p-8 text-base md:text-xl font-medium bg-[#0A0C0E] border border-[#22262B] rounded-2xl outline-none placeholder:text-slate-800 resize-none leading-relaxed text-white focus:border-[#FF5722]/40 transition-all duration-300"
+                    className="w-full h-[300px] md:h-[450px] p-6 md:p-8 text-base md:text-xl font-medium bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl outline-none placeholder:text-[var(--text-muted)] resize-none leading-relaxed text-[var(--text-main)] focus:border-[#0EA5E9]/40 transition-all duration-300"
                     placeholder={"EAN | Quantidade \nEx: 789123456789 | 10"}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
@@ -257,13 +257,13 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
                 <button 
                   key={i} 
                   onClick={() => setText(temp.text)}
-                  className="group p-5 bg-[#14171A] border border-[#22262B] rounded-2xl hover:border-[#FF5722] hover:bg-[#1A1C1E] transition-all text-left"
+                  className="group p-5 bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl hover:border-[#0EA5E9] hover:bg-[var(--accent)] transition-all text-left"
                 >
                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform" style={{ backgroundColor: `${temp.color}15`, color: temp.color }}>
                       <temp.icon size={20} />
                    </div>
-                   <h5 className="font-bold text-white mb-1 text-sm">{temp.label}</h5>
-                   <p className="text-[9px] text-slate-600 font-bold uppercase tracking-widest">Usar Template</p>
+                   <h5 className="font-bold text-[var(--text-main)] mb-1 text-sm">{temp.label}</h5>
+                   <p className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-widest">Usar Template</p>
                 </button>
                ))}
             </div>
@@ -273,32 +273,32 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
           <div className="space-y-6">
             <div className="card border-dashed border-slate-800 bg-[#0F1113]">
                <div className="flex items-center gap-3 mb-8">
-                  <Sparkles size={20} className="text-[#FF5722]" />
-                  <h4 className="text-[10px] font-black text-white uppercase tracking-widest">Preview em Tempo Real</h4>
+                  <Sparkles size={20} className="text-[#0EA5E9]" />
+                  <h4 className="text-[10px] font-black text-[var(--text-main)] uppercase tracking-widest">Preview em Tempo Real</h4>
                </div>
                <div className="space-y-2">
                   {liveParsed.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
                       {liveParsed.map((p, i) => (
-                        <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-[#FF5722]/5 rounded-lg border border-[#FF5722]/10 animate-fade-in">
-                           <span className="text-[10px] font-bold text-[#FF5722] truncate max-w-[120px]">{p.query}</span>
-                           <span className="text-[10px] font-black text-[#FF5722]/40">x{p.quantity}</span>
-                        </div>
-                      ))}
+                        <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-[#0EA5E9]/5 rounded-lg border border-[#0EA5E9]/10 animate-fade-in">
+                           <span className="text-[10px] font-bold text-[#0EA5E9] truncate max-w-[120px]">{p.query}</span>
+                           <span className="text-[10px] font-black text-[#0EA5E9]/40">x{p.quantity}</span>
+                         </div>
+                       ))}
                     </div>
                   ) : (
                     <div className="py-12 text-center opacity-30">
-                       <Loader2 className="mx-auto text-slate-700 animate-spin mb-4" size={32} />
-                       <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Aguardando entrada...</p>
+                       <Loader2 className="mx-auto text-[var(--text-muted)] animate-spin mb-4" size={32} />
+                       <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">Aguardando entrada...</p>
                     </div>
                   )}
                </div>
             </div>
 
-            <div className="p-8 bg-[#FF5722]/5 rounded-[2rem] border border-[#FF5722]/10 text-white relative overflow-hidden">
-               <HelpCircle size={24} className="mb-4 text-[#FF5722]" />
+            <div className="p-8 bg-[#0EA5E9]/5 rounded-[2rem] border border-[#0EA5E9]/10 text-[var(--text-main)] relative overflow-hidden">
+               <HelpCircle size={24} className="mb-4 text-[#0EA5E9]" />
                <h4 className="text-base font-bold mb-2 tracking-tight">Dica da Alice</h4>
-               <p className="text-xs text-slate-500 font-medium leading-relaxed">
+               <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
                  Você pode colar listas diretas do WhatsApp ou Excel. Nossa IA limpa e identifica cada item para você.
                </p>
             </div>
@@ -309,28 +309,28 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
       {step === 2 && (
         <div className="card shadow-2xl animate-fade-in">
            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-              <h3 className="text-2xl font-black text-white tracking-tight">Revisão Final</h3>
-              <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                 Total de Itens: <span className="text-[#FF5722]">{items.length}</span>
+              <h3 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Revisão Final</h3>
+              <div className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                 Total de Itens: <span className="text-[#0EA5E9]">{items.length}</span>
               </div>
            </div>
            
-           <div className="overflow-hidden rounded-2xl border border-[#22262B] mb-8">
+           <div className="overflow-hidden rounded-2xl border border-[var(--border)] mb-8">
               <table className="modern-table">
-                <thead className="bg-[#1A1C1E]">
+                <thead className="bg-[var(--accent)]">
                   <tr>
                     <th>Produto / Descrição</th>
                     <th className="text-center">Qtd</th>
                     <th className="text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="bg-[#0A0C0E]">
+                <tbody className="bg-[var(--bg-main)]">
                   {items.map((item, idx) => (
                     <tr key={idx}>
-                      <td className="font-bold text-slate-300">{item.query}</td>
-                      <td className="font-black text-white text-center">{item.quantity}</td>
+                      <td className="font-bold text-[var(--text-main)]">{item.query}</td>
+                      <td className="font-black text-[var(--text-main)] text-center">{item.quantity}</td>
                       <td className="text-right">
-                         <button className="p-2 text-slate-700 hover:text-red-500 transition-colors">
+                         <button className="p-2 text-[var(--text-muted)] hover:text-red-500 transition-colors">
                             <Trash2 size={18} />
                          </button>
                       </td>
@@ -341,7 +341,7 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
            </div>
 
            <div className="flex flex-col-reverse sm:flex-row justify-between gap-4">
-              <button onClick={() => setStep(1)} className="px-8 py-4 font-bold text-slate-600 hover:text-white transition-colors text-xs uppercase tracking-widest">
+              <button onClick={() => setStep(1)} className="px-8 py-4 font-bold text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors text-xs uppercase tracking-widest">
                  Alterar Lista
               </button>
               <button 
