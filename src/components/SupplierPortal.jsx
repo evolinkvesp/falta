@@ -50,7 +50,7 @@ export default function SupplierPortal() {
     try {
       const { data: quoteItems, error } = await supabase
         .from('itens_cotacao')
-        .select('id, produto_id, quantidade_desejada, produtos(nome, ean, custo_medio)')
+        .select('id, produto_id, produtos(nome, ean, custo_medio)')
         .eq('cotacao_id', q)
       
       if (error) throw error
@@ -181,11 +181,7 @@ export default function SupplierPortal() {
                  <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1">
                        <h4 className="font-black text-lg text-[var(--text-main)] leading-tight">{item.produtos.nome}</h4>
-                       <div className="flex items-center gap-2">
-                          <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">EAN: {item.produtos.ean || '---'}</p>
-                          <span className="w-1 h-1 bg-[var(--text-muted)] rounded-full opacity-30"></span>
-                          <p className="text-[10px] font-black text-[#0EA5E9] uppercase tracking-widest">Qtd Solicitada: {item.quantidade_desejada}</p>
-                       </div>
+                       <p className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest">EAN: {item.produtos.ean || '---'}</p>
                     </div>
                     <div className="w-10 h-10 bg-[var(--accent)] rounded-xl flex items-center justify-center text-[var(--text-muted)]">
                        <Package size={20} />
