@@ -159,11 +159,29 @@ export default function ComparisonView({ quoteId, onBack }) {
       } else {
         throw new Error(res.error)
       }
-    } catch (err) {
-      console.error('Erro ao finalizar:', err)
-      alert('Erro ao processar pedido: ' + err.message)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Tem certeza que deseja apagar esta cotação? Esta ação não poderá ser desfeita.')) return;
+    
+    setLoading(true)
+    try {
+      const { error } = await supabase
+        .from('cotacoes_mestre')
+        .delete()
+        .eq('id', quoteId);
+        
+      if (error) throw error;
+      
+      alert('Cotação apagada com sucesso.');
+      onBack();
+    } catch (err) {
+      console.error('Error deleting quote:', err);
+      alert('Erro ao apagar cotação.');
+      setLoading(false);
     }
   }
 
@@ -183,6 +201,13 @@ export default function ComparisonView({ quoteId, onBack }) {
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={() => window.print()} className="w-12 h-12 flex items-center justify-center bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl text-[var(--text-muted)] hover:text-[#0EA5E9] transition-all">
             <Printer size={20} />
+          </button>
+          <button 
+            onClick={handleDelete}
+            className="w-12 h-12 flex items-center justify-center bg-[var(--bg-card)] border border-red-500/20 rounded-2xl text-red-500 hover:bg-red-500/10 transition-all"
+            title="Apagar Cotação"
+          >
+            <Trash2 size={20} />
           </button>
           <button 
              onClick={handleConfirmOrder}

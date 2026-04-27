@@ -4,7 +4,7 @@ import {
   Users, Package, DollarSign, ArrowUpRight, ArrowDownRight, 
   SlidersHorizontal, Activity, Target, ShieldCheck, Globe, 
   RefreshCcw, Sparkles, ChevronRight, Loader2, AlertTriangle, TrendingUp,
-  ClipboardList, FileText
+  ClipboardList, FileText, Trash2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { format, subDays, startOfWeek, endOfWeek } from 'date-fns'
@@ -85,6 +85,24 @@ export default function Dashboard({ onNew, onViewQuote }) {
     { name: 'Concluídas', value: quotes.filter(q => q.status === 'FINALIZADA').length, color: '#10B981' },
     { name: 'Em Aberto', value: activeCount, color: '#0EA5E9' },
   ]
+  
+  async function handleDeleteQuote(e, id) {
+    e.stopPropagation();
+    if (!window.confirm('Tem certeza que deseja apagar esta cotação? Esta ação não pode ser desfeita.')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('cotacoes_mestre')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      setQuotes(quotes.filter(q => q.id !== id));
+    } catch (err) {
+      console.error('Error deleting quote:', err);
+      alert('Erro ao apagar cotação.');
+    }
+  }
 
   if (loading) {
     return (
@@ -340,6 +358,13 @@ export default function Dashboard({ onNew, onViewQuote }) {
                     </td>
                     <td className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={(e) => handleDeleteQuote(e, quote.id)}
+                          className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 transition-all"
+                          title="Apagar Cotação"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-muted)] group-hover:text-[#0EA5E9] group-hover:bg-[#0EA5E9]/10 transition-all">
                           <ChevronRight size={18} />
                         </div>
