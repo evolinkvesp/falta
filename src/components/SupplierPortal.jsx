@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { 
   Save, Package, CheckCircle, AlertCircle, Truck, 
   PlusSquare, DollarSign, Clock, ShieldCheck, HelpCircle,
-  ChevronRight, Calendar as CalendarIcon, Info, Send
+  ChevronRight, Calendar as CalendarIcon, Info, Send, XCircle, RefreshCcw
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import logo from '../assets/logo.png'
@@ -15,6 +15,7 @@ export default function SupplierPortal() {
   const [supplierId, setSupplierId] = useState(null)
   const [prices, setPrices] = useState({})
   const [expirations, setExpirations] = useState({})
+  const [error, setError] = useState(null) // 'no_token' | 'invalid_token' | 'expired' | 'no_items' | 'fetch_error'
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -23,6 +24,7 @@ export default function SupplierPortal() {
     if (t) {
       fetchByToken(t)
     } else {
+      setError('no_token')
       setLoading(false)
     }
   }, [])
@@ -31,17 +33,30 @@ export default function SupplierPortal() {
     try {
       const { data: tokenData, error: tError } = await supabase
         .from('tokens_acesso_fornecedores')
-        .select('cotacao_id, fornecedor_id')
+        .select('cotacao_id, fornecedor_id, expires_at')
         .eq('token', t)
         .single()
       
-      if (tError) throw tError
+      if (tError || !tokenData) {
+        console.error('Invalid token:', tError)
+        setError('invalid_token')
+        setLoading(false)
+        return
+      }
+
+      // Check if token is expired
+      if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
+        setError('expired')
+        setLoading(false)
+        return
+      }
 
       setQuoteId(tokenData.cotacao_id)
       setSupplierId(tokenData.fornecedor_id)
-      fetchItems(tokenData.cotacao_id, tokenData.fornecedor_id)
+      await fetchItems(tokenData.cotacao_id, tokenData.fornecedor_id)
     } catch (err) {
       console.error('Invalid token:', err)
+      setError('invalid_token')
       setLoading(false)
     }
   }
@@ -53,7 +68,18 @@ export default function SupplierPortal() {
         .select('id, produto_id, produtos(nome, ean, custo_medio)')
         .eq('cotacao_id', q)
       
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching items:', error)
+        setError('fetch_error')
+        setLoading(false)
+        return
+      }
+
+      if (!quoteItems || quoteItems.length === 0) {
+        setError('no_items')
+        setLoading(false)
+        return
+      }
 
       const { data: responses } = await supabase
         .from('respostas_fornecedores')
@@ -67,11 +93,12 @@ export default function SupplierPortal() {
         initialExpirations[r.item_cotacao_id] = r.data_validade
       })
 
-      setItems(quoteItems || [])
+      setItems(quoteItems)
       setPrices(initialPrices)
       setExpirations(initialExpirations)
     } catch (err) {
       console.error('Error:', err)
+      setError('fetch_error')
     } finally {
       setLoading(false)
     }
@@ -137,6 +164,80 @@ export default function SupplierPortal() {
           <p className="text-[var(--text-muted)] font-semibold leading-relaxed">
             Seus preços foram criptografados e enviados para a Alice. O comprador será notificado instantaneamente.
           </p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    const errorMessages = {
+      no_token: {
+        title: 'Link Inválido',
+        desc: 'Este link não contém um token de acesso. Solicite um novo link ao comprador.',
+        icon: XCircle,
+        color: 'red'
+      },
+      invalid_token: {
+        title: 'Token Não Encontrado',
+        desc: 'Este token de acesso não é válido ou foi revogado. Solicite um novo link ao comprador.',
+        icon: XCircle,
+        color: 'red'
+      },
+      expired: {
+        title: 'Link Expirado',
+        desc: 'O prazo para preenchimento desta cotação já expirou. Solicite um novo link ao comprador.',
+        icon: Clock,
+        color: 'amber'
+      },
+      no_items: {
+        title: 'Cotação Vazia',
+        desc: 'Esta cotação ainda não possui produtos cadastrados. O comprador pode estar preparando a lista.',
+        icon: AlertCircle,
+        color: 'amber'
+      },
+      fetch_error: {
+        title: 'Erro de Conexão',
+        desc: 'Não foi possível carregar os dados. Verifique sua conexão e tente novamente.',
+        icon: AlertCircle,
+        color: 'red'
+      }
+    }
+
+    const errInfo = errorMessages[error] || errorMessages.fetch_error
+    const IconComp = errInfo.icon
+    const colorMap = {
+      red: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-500' },
+      amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-500' }
+    }
+    const colors = colorMap[errInfo.color]
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-[var(--bg-main)]">
+        {/* Top Banner */}
+        <div className="fixed top-0 left-0 right-0 bg-[#0EA5E9] text-white py-3 px-4 text-center z-50">
+           <p className="text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2">
+              <ShieldCheck size={14} /> Ambiente Seguro • Alice Engine v2.0
+           </p>
+        </div>
+        <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-[3rem] p-12 text-center max-w-md w-full shadow-2xl animate-scale-in">
+          <img 
+            src={logo} 
+            alt="Alice Farma" 
+            className="h-16 w-auto mx-auto mb-8 dark:invert"
+          />
+          <div className={`${colors.bg} w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-8 border ${colors.border}`}>
+            <IconComp className={colors.text} size={48} />
+          </div>
+          <h2 className="text-2xl font-black text-[var(--text-main)] mb-4">{errInfo.title}</h2>
+          <p className="text-sm text-[var(--text-muted)] font-medium leading-relaxed mb-8">
+            {errInfo.desc}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0EA5E9] text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-[#0284C7] transition-all"
+          >
+            <RefreshCcw size={16} /> Tentar Novamente
+          </button>
         </div>
       </div>
     )
