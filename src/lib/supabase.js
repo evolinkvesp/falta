@@ -4,12 +4,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn('Supabase URL or Anon Key is missing. Check your environment variables.')
+  throw new Error('Supabase URL or Anon Key is missing. Check your environment variables.')
 }
 
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseKey || 'placeholder', 
+  supabaseUrl,
+  supabaseKey,
   {
     auth: {
       storage: typeof window !== 'undefined' ? window.localStorage : null,
@@ -21,4 +21,3 @@ export const supabase = createClient(
 )
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseKey)
-

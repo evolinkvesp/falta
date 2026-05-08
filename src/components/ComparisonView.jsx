@@ -26,9 +26,14 @@ export default function ComparisonView({ quoteId, onBack }) {
 
   useEffect(() => {
     fetchComparison()
-    fetchSuppliers()
     fetchTokens()
   }, [quoteId])
+
+  useEffect(() => {
+    if (quoteId && profile?.farmacia_id) {
+      fetchSuppliers()
+    }
+  }, [quoteId, profile?.farmacia_id])
 
   async function fetchTokens() {
     const { data } = await supabase.from('tokens_acesso_fornecedores').select('*').eq('cotacao_id', quoteId)
@@ -151,7 +156,7 @@ export default function ComparisonView({ quoteId, onBack }) {
       if (res.success) {
         await supabase
           .from('cotacoes_mestre')
-          .update({ status: 'finalizada' })
+          .update({ status: 'FINALIZADA' })
           .eq('id', quoteId)
 
         alert('Pedido finalizado e enviado com sucesso!')

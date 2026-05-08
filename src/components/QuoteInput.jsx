@@ -49,7 +49,12 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
         quantity: parseInt(parts[1]) || 1,
         status: 'pending'
       }
-    })
+    }).filter(item => item.query.length > 2)
+
+    if (parsed.length === 0) {
+      alert('Insira ao menos um item válido com mais de 2 caracteres.')
+      return
+    }
     setItems(parsed)
     setStep(2)
   }

@@ -2,7 +2,7 @@ const CACHE_NAME = 'alice-farma-v1';
 const urlsToCache = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/site.webmanifest'
 ];
 
 self.addEventListener('install', event => {

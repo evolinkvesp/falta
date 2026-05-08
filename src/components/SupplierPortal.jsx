@@ -84,6 +84,7 @@ export default function SupplierPortal() {
       const { data: responses } = await supabase
         .from('respostas_fornecedores')
         .select('*')
+        .in('item_cotacao_id', quoteItems.map((item) => item.id))
         .eq('fornecedor_id', s)
 
       const initialPrices = {}
@@ -131,9 +132,10 @@ export default function SupplierPortal() {
       }
 
       for (const payload of payloads) {
-        await supabase
+        const { error: upsertError } = await supabase
           .from('respostas_fornecedores')
           .upsert(payload, { onConflict: 'item_cotacao_id,fornecedor_id' })
+        if (upsertError) throw upsertError
       }
 
       setSubmitted(true)

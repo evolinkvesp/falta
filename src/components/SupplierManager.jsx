@@ -18,14 +18,17 @@ const SupplierManager = () => {
    });
 
    useEffect(() => {
-      fetchSuppliers();
-   }, []);
+      if (profile?.farmacia_id) {
+         fetchSuppliers();
+      }
+   }, [profile?.farmacia_id]);
 
    async function fetchSuppliers() {
       try {
          const { data, error } = await supabase
             .from('fornecedores')
             .select('*')
+            .eq('farmacia_id', profile.farmacia_id)
             .order('nome');
 
          if (error) throw error;
