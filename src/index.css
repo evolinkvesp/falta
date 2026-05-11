@@ -211,6 +211,12 @@ body {
   flex: 1;
 }
 
+.mobile-nav-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  border-radius: 0.75rem;
+}
+
 .mobile-nav-btn.active {
   color: var(--primary);
 }

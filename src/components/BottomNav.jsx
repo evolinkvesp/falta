@@ -17,7 +17,9 @@ export default function BottomNav({ currentView, onViewChange }) {
         return (
           <button
             key={item.id}
+            type="button"
             onClick={() => onViewChange(item.id)}
+            aria-current={isActive ? 'page' : undefined}
             className={`mobile-nav-btn ${isActive ? 'active' : ''}`}
           >
             <Icon size={20} strokeWidth={isActive ? 3 : 2} />

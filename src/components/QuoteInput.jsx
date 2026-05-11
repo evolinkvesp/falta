@@ -1,37 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useRef, useState } from 'react'
 import { 
-  Upload, Send, Trash2, Edit3, CheckCircle, Package, AlertCircle, 
-  ArrowLeft, Rocket, ListChecks, Loader2, Sparkles, Check, 
-  ChevronRight, ClipboardList, SendHorizonal, ArrowRight, 
-  HelpCircle, FileText, Activity, MousePointer2, FileCode, CheckCircle2,
-  MousePointer, LayoutGrid, Pill, Thermometer, Bath, RefreshCcw
+  Upload, Trash2, CheckCircle, AlertCircle,
+  ArrowLeft, Rocket, ListChecks, Loader2, Sparkles, Check,
+  ChevronRight, ClipboardList, ArrowRight,
+  HelpCircle, FileText, Activity, Pill, Thermometer, Bath, RefreshCcw
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
 import { triggerWebhook, generateSupplierLink } from '../lib/webhook'
+import { extractMedicationListFromFile } from '../lib/aiMedicationParser'
+import { parseQuoteText } from '../lib/quoteParser'
 
 export default function QuoteInput({ onProcessComplete, onBack }) {
   const { profile } = useAuth()
+  const fileInputRef = useRef(null)
   const [text, setText] = useState('')
   const [items, setItems] = useState([])
-  const [liveParsed, setLiveParsed] = useState([])
   const [loading, setLoading] = useState(false)
+  const [sendingWebhook, setSendingWebhook] = useState(false)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [fileParsing, setFileParsing] = useState(false)
+  const [fileError, setFileError] = useState('')
+  const [fileWasAiParsed, setFileWasAiParsed] = useState(false)
   const [step, setStep] = useState(1) // 1: Input, 2: Review, 3: Success/Dispatch
   const [progress, setProgress] = useState(0)
   const [statusText, setStatusText] = useState('')
-
-  // Real-time parser feedback
-  useEffect(() => {
-    const lines = text.split('\n').filter(l => l.trim());
-    const parsed = lines.map(line => {
-      const parts = line.split(/[|;,]/)
-      return {
-        query: parts[0]?.trim() || '',
-        quantity: parseInt(parts[1]) || 1
-      }
-    }).filter(p => p.query.length > 2)
-    setLiveParsed(parsed)
-  }, [text])
+  const liveParsed = parseQuoteText(text)
 
   const templates = [
     { label: 'Antibióticos', text: 'Amoxicilina 500mg | 10\nAzitromicina 500mg | 5', icon: Pill, color: '#0EA5E9' },
@@ -39,17 +33,45 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
     { label: 'Higiene', text: 'Fralda G | 50\nShampoo Infantil | 12', icon: Bath, color: '#10B981' }
   ]
 
+  const handleFileChange = (event) => {
+    const nextFile = event.target.files?.[0] || null
+    setSelectedFile(nextFile)
+    setFileError('')
+    setFileWasAiParsed(false)
+  }
+
+  const handleFileExtract = async () => {
+    if (!selectedFile) {
+      alert('Selecione um arquivo antes de enviar para a IA.')
+      return
+    }
+
+    setFileParsing(true)
+    setFileError('')
+
+    try {
+      const payload = await extractMedicationListFromFile(selectedFile)
+      setText(payload.normalized_text || '')
+      setFileWasAiParsed(true)
+    } catch (error) {
+      console.error(error)
+      setFileError(error.message || 'Nao foi possivel analisar o arquivo.')
+    } finally {
+      setFileParsing(false)
+    }
+  }
+
+  const handleClearFile = () => {
+    setSelectedFile(null)
+    setFileError('')
+    setFileWasAiParsed(false)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const handleParse = () => {
-    const lines = text.split('\n').filter(l => l.trim());
-    const parsed = lines.map((line, idx) => {
-      const parts = line.split(/[|;,]/)
-      return {
-        tempId: idx,
-        query: parts[0]?.trim() || '',
-        quantity: parseInt(parts[1]) || 1,
-        status: 'pending'
-      }
-    }).filter(item => item.query.length > 2)
+    const parsed = parseQuoteText(text)
 
     if (parsed.length === 0) {
       alert('Insira ao menos um item válido com mais de 2 caracteres.')
@@ -142,13 +164,18 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
 
           if (!tError && tData) {
              const link = generateSupplierLink(master.id, tData.token);
-             await triggerWebhook({ 
-                cotacao_id: master.id, 
-                fornecedor_id: s.id, 
-                link: link,
-                fornecedor_nome: s.nome,
-                whatsapp: s.whatsapp
-             }, profile?.farmacias?.webhook_cotacao);
+             setSendingWebhook(true)
+             try {
+               await triggerWebhook({ 
+                  cotacao_id: master.id, 
+                  fornecedor_id: s.id, 
+                  link: link,
+                  fornecedor_nome: s.nome,
+                  whatsapp: s.whatsapp
+               }, profile?.farmacias?.webhook_cotacao);
+             } finally {
+               setSendingWebhook(false)
+             }
           }
           setProgress(40 + (idx + 1) * stepSize)
         }
@@ -212,7 +239,10 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
               </div>
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-[var(--text-main)] tracking-tight">Alice Engine em Ação</h2>
-                <p className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">{statusText}</p>
+                <div className="flex items-center justify-center gap-2">
+                  {sendingWebhook && <Loader2 className="animate-spin text-[#0EA5E9]" size={18} />}
+                  <p className="text-sm font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">{statusText}</p>
+                </div>
               </div>
               <div className="w-full h-3 bg-[var(--accent)] rounded-full overflow-hidden border border-[var(--border)]">
                  <div 
@@ -251,10 +281,104 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
                   )}
                </div>
 
+               <div className="mb-6 rounded-[1.75rem] border border-dashed border-[#0EA5E9]/25 bg-[var(--accent)] p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0EA5E9]/10 text-[#0EA5E9]">
+                          <Upload size={20} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-black uppercase tracking-widest text-[var(--text-main)]">Upload com IA</h4>
+                          <p className="text-xs font-medium text-[var(--text-muted)]">PDF, imagem, TXT ou CSV para extrair remedio + quantidade.</p>
+                        </div>
+                      </div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Limite de 10MB por arquivo</p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,image/*,.txt,.csv,text/plain,text/csv,application/pdf"
+                        className="hidden"
+                        onChange={handleFileChange}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center justify-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] px-5 py-3 text-xs font-black uppercase tracking-widest text-[var(--text-main)] transition-all hover:border-[#0EA5E9]/30 hover:text-[#0EA5E9]"
+                      >
+                        <FileText size={16} />
+                        Selecionar Arquivo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleFileExtract}
+                        disabled={!selectedFile || fileParsing}
+                        className="btn-primary min-w-[220px] disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {fileParsing ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+                        {fileParsing ? 'Lendo com IA...' : 'Extrair Lista com IA'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {(selectedFile || fileError) && (
+                    <div className="mt-4 space-y-3">
+                      {selectedFile && (
+                        <div className="flex flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--bg-card)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold text-[var(--text-main)]">{selectedFile.name}</p>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                              {selectedFile.type || 'arquivo'} • {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {fileWasAiParsed && (
+                              <span className="rounded-full border border-green-500/20 bg-green-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-green-600">
+                                Extraido por IA
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleClearFile}
+                              className="flex h-10 w-10 items-center justify-center rounded-xl text-[var(--text-muted)] transition-colors hover:text-red-500"
+                            >
+                              <RefreshCcw size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {fileError && (
+                        <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">
+                          <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                          <span>{fileError}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+               </div>
+
+               {fileParsing && (
+                 <div className="mb-6 rounded-[1.75rem] border border-[#0EA5E9]/15 bg-[#0EA5E9]/5 p-5 animate-fade-in">
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0EA5E9]/10 text-[#0EA5E9]">
+                        <Loader2 className="animate-spin" size={22} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-[0.18em] text-[var(--text-main)]">Analisando documento</p>
+                        <p className="text-xs font-medium text-[var(--text-muted)]">A OpenAI esta lendo o arquivo e montando a lista de itens.</p>
+                      </div>
+                    </div>
+                 </div>
+               )}
+
                <div className="relative group">
                   <textarea
                     className="w-full h-[300px] md:h-[450px] p-6 md:p-8 text-base md:text-xl font-medium bg-[var(--bg-main)] border border-[var(--border)] rounded-2xl outline-none placeholder:text-[var(--text-muted)] resize-none leading-relaxed text-[var(--text-main)] focus:border-[#0EA5E9]/40 transition-all duration-300"
-                    placeholder={"EAN | Quantidade \nEx: 789123456789 | 10"}
+                    placeholder={"Produto | Quantidade\nEx: Amoxicilina 500mg | 10"}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                   />
@@ -263,7 +387,7 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
                <div className="mt-8 flex justify-end">
                   <button 
                     onClick={handleParse} 
-                    disabled={!text.trim()} 
+                    disabled={!text.trim() || fileParsing} 
                     className="btn-primary w-full sm:w-auto px-10 py-5"
                   >
                     Analisar Itens
@@ -320,7 +444,7 @@ export default function QuoteInput({ onProcessComplete, onBack }) {
                <HelpCircle size={24} className="mb-4 text-[#0EA5E9]" />
                <h4 className="text-base font-bold mb-2 tracking-tight">Dica da Alice</h4>
                <p className="text-xs text-[var(--text-muted)] font-medium leading-relaxed">
-                 Você pode colar listas diretas do WhatsApp ou Excel. Nossa IA limpa e identifica cada item para você.
+                 Voce pode colar listas do WhatsApp ou subir PDF e imagem. A IA transforma o documento em itens revisaveis antes do disparo.
                </p>
             </div>
           </div>

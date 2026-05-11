@@ -62,12 +62,14 @@ const Sidebar = ({ currentView, onViewChange }) => {
           {menuItems.map((item) => (
             <button
               key={item.id}
+              type="button"
               onClick={() => onViewChange(item.id)}
+              aria-current={currentView === item.id ? 'page' : undefined}
               className={`w-full group flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all duration-300 ${
                 currentView === item.id 
                 ? 'bg-[#0EA5E9] text-white shadow-xl shadow-[#0EA5E9]/30 font-bold' 
                 : 'text-[var(--text-muted)] hover:bg-[var(--accent)] hover:text-[#0EA5E9]'
-              }`}
+              } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-sidebar)]`}
             >
               <div className="flex items-center gap-3">
                 <item.icon size={20} className={currentView === item.id ? 'text-white' : 'text-[var(--text-muted)] group-hover:text-[#0EA5E9]'} />
@@ -87,15 +89,18 @@ const Sidebar = ({ currentView, onViewChange }) => {
         {/* Bottom Actions: Theme Toggle & Logout */}
         <div className="pt-6 border-t border-[var(--border)] space-y-2">
           <button 
+            type="button"
             onClick={() => setIsDark(!isDark)}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[var(--text-muted)] hover:bg-[var(--accent)] hover:text-[#0EA5E9] transition-all"
+            aria-pressed={isDark}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-[var(--text-muted)] hover:bg-[var(--accent)] hover:text-[#0EA5E9] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0EA5E9] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-sidebar)]"
           >
             {isDark ? <Sun size={20} /> : <Moon size={20} />}
             <span className="text-sm font-semibold">{isDark ? 'Modo Claro' : 'Modo Noite'}</span>
           </button>
           <button 
+            type="button"
             onClick={signOut}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-sidebar)]"
           >
             <LogOut size={20} />
             <span className="text-sm font-semibold">Sair</span>

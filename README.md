@@ -1,16 +1,39 @@
-# React + Vite
+# Falta Farma
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Upload com IA
 
-Currently, two official plugins are available:
+A tela de `Nova Cotacao` aceita upload de PDF, imagem, TXT e CSV para extrair `produto | quantidade` com OpenAI.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Fluxo:
 
-## React Compiler
+1. O frontend envia o arquivo para a Edge Function `parse-medication-list`.
+2. A Edge Function chama a OpenAI Responses API com `OPENAI_API_KEY` em segredo de servidor.
+3. A funcao devolve a lista estruturada para revisao antes do disparo da cotacao.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Configuracao
 
-## Expanding the ESLint configuration
+Variaveis do frontend em `.env`:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+VITE_SUPABASE_URL=...
+VITE_SUPABASE_ANON_KEY=...
+VITE_WEBHOOK_PEDIDO_URL=...
+```
+
+A chave da OpenAI nao deve ir para o Vite. Configure nas secrets do Supabase:
+
+```bash
+supabase secrets set OPENAI_API_KEY=sk-... OPENAI_PARSER_MODEL=gpt-5.4-mini
+```
+
+Para desenvolver a funcao localmente:
+
+```bash
+supabase functions serve parse-medication-list --env-file supabase/functions/.env.local
+```
+
+Para deploy:
+
+```bash
+supabase functions deploy parse-medication-list
+```

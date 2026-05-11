@@ -67,8 +67,14 @@ function App() {
   return (
     <div className="app-container">
       <div className="main-wrapper">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[1100] focus:rounded-lg focus:bg-[var(--bg-card)] focus:px-3 focus:py-2 focus:text-sm focus:font-bold focus:text-[var(--text-main)] focus:shadow-lg"
+        >
+          Pular para o conteúdo
+        </a>
         <Sidebar currentView={view} onViewChange={handleViewChange} />
-        <main className="main-content">
+        <main id="main" className="main-content">
           <div className="content-container">
              <div className="mb-8 flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">

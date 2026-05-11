@@ -4,7 +4,7 @@ import {
   ArrowLeft, Send, CheckCircle, Truck, FileText, Share2, 
   BarChart3, Package, Rocket, Download, Printer, TrendingUp, 
   Award, Zap, Trash2, Maximize2, Minimize2, ChevronRight,
-  TrendingDown, ShieldCheck, AlertCircle, Info
+  TrendingDown, ShieldCheck, AlertCircle, Info, Loader2
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../lib/AuthContext'
@@ -18,6 +18,7 @@ export default function ComparisonView({ quoteId, onBack }) {
   const { profile } = useAuth()
   const [data, setData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [sendingWebhook, setSendingWebhook] = useState(false)
   const [suppliers, setSuppliers] = useState([])
   const [tokens, setTokens] = useState([])
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -151,7 +152,13 @@ export default function ComparisonView({ quoteId, onBack }) {
         economia_estimada: economy
       }
 
-      const res = await triggerPedidoWebhook(payload, farmacia.webhook_pedido)
+      setSendingWebhook(true)
+      let res
+      try {
+        res = await triggerPedidoWebhook(payload, farmacia.webhook_pedido)
+      } finally {
+        setSendingWebhook(false)
+      }
 
       if (res.success) {
         await supabase
@@ -192,6 +199,14 @@ export default function ComparisonView({ quoteId, onBack }) {
 
   return (
     <div className="space-y-8 animate-fade-in pb-36 md:pb-24">
+      {sendingWebhook && (
+        <div className="fixed inset-0 z-[2100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-[var(--bg-card)] border border-[var(--border)] rounded-2xl px-5 py-4 shadow-2xl flex items-center gap-3">
+            <Loader2 className="animate-spin text-[#0EA5E9]" size={18} />
+            <p className="text-sm font-black text-[var(--text-main)] tracking-tight">Enviando para o webhook…</p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-[var(--border)]">
         <div className="space-y-2">
           <button onClick={onBack} className="flex items-center gap-2 text-[var(--text-muted)] hover:text-[#0EA5E9] font-bold text-[10px] uppercase tracking-[0.2em] transition-all">
