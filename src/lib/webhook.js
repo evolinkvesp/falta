@@ -49,6 +49,10 @@ export async function triggerPedidoWebhook(payload, customUrl = null) {
 
 // Helper para gerar o link do fornecedor (usado no payload do webhook)
 export function generateSupplierLink(cotacaoId, token) {
-  const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin;
-  return `${baseUrl}/?token=${token}`;
+  const configuredBaseUrl = import.meta.env.VITE_APP_URL;
+  const runtimeBaseUrl = `${window.location.origin}${window.location.pathname}`;
+  const baseUrl = configuredBaseUrl || runtimeBaseUrl;
+  const url = new URL(baseUrl, window.location.origin);
+  url.searchParams.set('token', token);
+  return url.toString();
 }
