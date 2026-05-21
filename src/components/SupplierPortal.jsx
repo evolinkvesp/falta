@@ -1,64 +1,27 @@
-import React, { useState, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { 
-  Save, Package, CheckCircle, AlertCircle, Truck, 
-  PlusSquare, DollarSign, Clock, ShieldCheck, HelpCircle,
-  ChevronRight, Calendar as CalendarIcon, Info, Send, XCircle, RefreshCcw
+  Package, CheckCircle, AlertCircle, Clock, ShieldCheck,
+  Calendar as CalendarIcon, Send, XCircle, RefreshCcw
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import logo from '../assets/logo.png'
 
+function getSupplierTokenFromUrl() {
+  if (typeof window === 'undefined') return null
+  return new URLSearchParams(window.location.search).get('token')
+}
+
 export default function SupplierPortal() {
+  const [accessToken] = useState(() => getSupplierTokenFromUrl())
   const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => Boolean(accessToken))
   const [submitted, setSubmitted] = useState(false)
-  const [quoteId, setQuoteId] = useState(null)
-  const [supplierId, setSupplierId] = useState(null)
   const [prices, setPrices] = useState({})
   const [expirations, setExpirations] = useState({})
-  const [error, setError] = useState(null) // 'no_token' | 'invalid_token' | 'expired' | 'no_items' | 'fetch_error'
+  const [error, setError] = useState(() => (accessToken ? null : 'no_token')) // 'no_token' | 'invalid_token' | 'expired' | 'no_items' | 'fetch_error'
+  const [submitError, setSubmitError] = useState(null)
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const t = params.get('token')
-    
-    if (t) {
-      fetchByToken(t)
-    } else {
-      setError('no_token')
-      setLoading(false)
-    }
-  }, [])
-
-  async function fetchByToken(t) {
-    try {
-      const { data: tokenData, error: tError } = await supabase
-        .rpc('validar_token_fornecedor', { p_token: t })
-        .maybeSingle()
-      
-      if (tError || !tokenData) {
-        console.error('Invalid token:', tError)
-        setError('invalid_token')
-        setLoading(false)
-        return
-      }
-
-      if (tokenData.status === 'expired') {
-        setError('expired')
-        setLoading(false)
-        return
-      }
-
-      setQuoteId(tokenData.cotacao_id)
-      setSupplierId(tokenData.fornecedor_id)
-      await fetchItems(t)
-    } catch (err) {
-      console.error('Invalid token:', err)
-      setError('invalid_token')
-      setLoading(false)
-    }
-  }
-
-  async function fetchItems(token) {
+  const fetchItems = useCallback(async (token) => {
     try {
       const { data: quoteItems, error } = await supabase
         .rpc('listar_itens_fornecedor', { p_token: token })
@@ -107,7 +70,42 @@ export default function SupplierPortal() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  const fetchByToken = useCallback(async (token) => {
+    try {
+      const { data: tokenData, error: tokenError } = await supabase
+        .rpc('validar_token_fornecedor', { p_token: token })
+        .maybeSingle()
+      
+      if (tokenError || !tokenData) {
+        console.error('Invalid token:', tokenError)
+        setError('invalid_token')
+        setLoading(false)
+        return
+      }
+
+      if (tokenData.status === 'expired') {
+        setError('expired')
+        setLoading(false)
+        return
+      }
+
+      await fetchItems(token)
+    } catch (err) {
+      console.error('Invalid token:', err)
+      setError('invalid_token')
+      setLoading(false)
+    }
+  }, [fetchItems])
+
+  useEffect(() => {
+    if (accessToken) {
+      // The token comes from URL state; the portal must validate it on first load.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchByToken(accessToken)
+    }
+  }, [accessToken, fetchByToken])
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault()
@@ -115,40 +113,69 @@ export default function SupplierPortal() {
 
     try {
       const payloads = []
+      setSubmitError(null)
       
       for (const [itemId, price] of Object.entries(prices)) {
-        const val = parseFloat(price)
-        if (!val) continue
+        const val = Number(String(price).replace(',', '.'))
+        if (!Number.isFinite(val) || val <= 0) continue
 
         payloads.push({
           item_cotacao_id: itemId,
-          fornecedor_id: supplierId,
           preco_ofertado: val,
-          data_validade: expirations[itemId] || null,
-          estoque_disponivel: 100
+          data_validade: expirations[itemId] || null
         })
       }
 
       if (payloads.length === 0) {
-        alert('Por favor, insira pelo menos um preço.')
+        const message = 'Informe pelo menos um preco maior que zero antes de enviar.'
+        setSubmitError(message)
+        alert(message)
         setLoading(false)
         return
       }
 
-      for (const payload of payloads) {
-        const { error: upsertError } = await supabase
-          .from('respostas_fornecedores')
-          .upsert(payload, { onConflict: 'item_cotacao_id,fornecedor_id' })
-        if (upsertError) throw upsertError
+      if (!accessToken) {
+        throw new Error('Token de acesso ausente.')
       }
+
+      const { error: saveError } = await supabase.rpc('salvar_precos_fornecedor', {
+        p_token: accessToken,
+        p_respostas: payloads
+      })
+
+      if (saveError) throw saveError
 
       setSubmitted(true)
     } catch (err) {
       console.error('Error submitting:', err)
-      alert('Erro ao salvar preços.')
+      const message = getSaveErrorMessage(err)
+      setSubmitError(message)
+      alert(message)
     } finally {
       setLoading(false)
     }
+  }
+
+  const getSaveErrorMessage = (err) => {
+    const message = err?.message || ''
+
+    if (message.includes('expired_token')) {
+      return 'Este link expirou. Solicite um novo link ao comprador antes de enviar os precos.'
+    }
+
+    if (message.includes('invalid_token')) {
+      return 'Este link nao e mais valido. Solicite um novo link ao comprador.'
+    }
+
+    if (message.includes('invalid_item')) {
+      return 'Um dos itens enviados nao pertence a esta cotacao. Recarregue o link e tente novamente.'
+    }
+
+    if (message.includes('invalid_payload')) {
+      return 'Os dados enviados estao invalidos. Revise os precos e datas antes de tentar novamente.'
+    }
+
+    return 'Nao foi possivel salvar os precos agora. Verifique sua conexao e tente novamente.'
   }
 
   const isShortDate = (date) => {
@@ -294,7 +321,7 @@ export default function SupplierPortal() {
         </header>
 
         <div className="space-y-6">
-          {items.map((item, idx) => (
+          {items.map((item) => (
             <div key={item.id} className="card relative group hover:border-[#0EA5E9]/30 transition-all !p-0 overflow-hidden border border-[var(--border)] shadow-sm">
               {/* Product Info Section */}
               <div className="p-6 border-b border-[var(--border)] bg-[var(--bg-main)]/30">
@@ -348,6 +375,13 @@ export default function SupplierPortal() {
             </div>
           ))}
         </div>
+
+        {submitError && (
+          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-4 text-sm font-semibold text-red-500">
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <span>{submitError}</span>
+          </div>
+        )}
 
 
         {/* Modern Floating Submit Footer */}
