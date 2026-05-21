@@ -1,37 +1,49 @@
-const CACHE_NAME = 'alice-farma-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/site.webmanifest'
-];
+const CACHE_NAME = 'alice-farma-v2';
+const urlsToCache = ['/site.webmanifest'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
   );
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames =>
+      Promise.all(
+        cacheNames
+          .filter(cacheName => cacheName !== CACHE_NAME)
+          .map(cacheName => caches.delete(cacheName))
+      )
+    )
+  );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {
-  // Ignorar requisições de desenvolvimento para evitar conflitos com o Vite
-  if (event.request.url.includes('localhost') || 
-      event.request.url.includes('@vite') || 
-      event.request.url.includes('src/')) {
+  const request = event.request;
+
+  if (
+    request.url.includes('localhost') ||
+    request.url.includes('@vite') ||
+    request.url.includes('src/') ||
+    request.destination === 'script' ||
+    request.destination === 'style' ||
+    request.destination === 'worker'
+  ) {
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(fetch(request));
     return;
   }
 
   event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        if (response) {
-          return response;
-        }
-        return fetch(event.request).catch(() => {
-          // Fallback silencioso se a rede falhar
-          return new Response('Network error occurred', { status: 408 });
-        });
-      })
+    caches.match(request).then(response => {
+      if (response) return response;
+      return fetch(request);
+    })
   );
 });
