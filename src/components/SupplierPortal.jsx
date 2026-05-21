@@ -50,7 +50,7 @@ export default function SupplierPortal() {
 
       setQuoteId(tokenData.cotacao_id)
       setSupplierId(tokenData.fornecedor_id)
-      await fetchItems(tokenData.cotacao_id, tokenData.fornecedor_id)
+      await fetchItems(t)
     } catch (err) {
       console.error('Invalid token:', err)
       setError('invalid_token')
@@ -58,12 +58,10 @@ export default function SupplierPortal() {
     }
   }
 
-  async function fetchItems(q, s) {
+  async function fetchItems(token) {
     try {
       const { data: quoteItems, error } = await supabase
-        .from('itens_cotacao')
-        .select('id, produto_id, produtos(nome, ean, custo_medio)')
-        .eq('cotacao_id', q)
+        .rpc('listar_itens_fornecedor', { p_token: token })
       
       if (error) {
         console.error('Error fetching items:', error)
@@ -78,20 +76,29 @@ export default function SupplierPortal() {
         return
       }
 
-      const { data: responses } = await supabase
-        .from('respostas_fornecedores')
-        .select('*')
-        .in('item_cotacao_id', quoteItems.map((item) => item.id))
-        .eq('fornecedor_id', s)
+      const normalizedItems = quoteItems.map((item) => ({
+        id: item.item_cotacao_id,
+        produto_id: item.produto_id,
+        quantidade_desejada: item.quantidade_desejada,
+        produtos: {
+          nome: item.produto_nome,
+          ean: item.produto_ean,
+          custo_medio: item.produto_custo_medio
+        }
+      }))
 
       const initialPrices = {}
       const initialExpirations = {}
-      responses?.forEach(r => {
-        initialPrices[r.item_cotacao_id] = r.preco_ofertado
-        initialExpirations[r.item_cotacao_id] = r.data_validade
+      quoteItems.forEach(item => {
+        if (item.preco_ofertado !== null && item.preco_ofertado !== undefined) {
+          initialPrices[item.item_cotacao_id] = item.preco_ofertado
+        }
+        if (item.data_validade) {
+          initialExpirations[item.item_cotacao_id] = item.data_validade
+        }
       })
 
-      setItems(quoteItems)
+      setItems(normalizedItems)
       setPrices(initialPrices)
       setExpirations(initialExpirations)
     } catch (err) {
